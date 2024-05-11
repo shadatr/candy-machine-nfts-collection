@@ -3,9 +3,10 @@
   "type": "module",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "app.ts",
   "scripts": {
-    "start": "ts-node src/index.js",
+    "start-wallet": "ts-node newWalletAirdrop.ts",
+    "start": "ts-node app.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "",
@@ -17,5 +18,9 @@
     "@metaplex-foundation/umi": "^0.9.1",
     "@metaplex-foundation/umi-bundle-defaults": "^0.9.1",
     "@solana/web3.js": "^1.91.8"
+  },
+  "devDependencies": {
+    "@types/bs58": "^4.0.4",
+    "tsx": "^4.9.4"
   }
 }
