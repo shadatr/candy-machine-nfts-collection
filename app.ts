@@ -3,15 +3,11 @@ import {
   Metaplex,
   keypairIdentity,
   bundlrStorage,
-  toMetaplexFile,
   toBigNumber,
   CreateCandyMachineInput,
   DefaultCandyGuardSettings,
-  CandyMachineItem,
   toDateTime,
   sol,
-  TransactionBuilder,
-  CreateCandyMachineBuilderContext,
 } from "@metaplex-foundation/js";
 import secret from './guideSecret.json';
 
@@ -126,7 +122,7 @@ async function addItems() {
     console.log(`     https://explorer.solana.com/tx/${response.signature}?cluster=devnet`);
 }
 
-addItems()
+// addItems()
 
 
 

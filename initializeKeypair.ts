@@ -1,6 +1,7 @@
 import * as web3 from "@solana/web3.js"
 import * as fs from "fs"
 import dotenv from "dotenv"
+import { PublicKey } from "@solana/web3.js"
 dotenv.config()
 
 export async function initializeKeypair(
@@ -19,6 +20,8 @@ export async function initializeKeypair(
   const secretKey = Uint8Array.from(secret)
   const keypairFromSecretKey = web3.Keypair.fromSecretKey(secretKey)
   await airdropSolIfNeeded(keypairFromSecretKey, connection)
+  const publicKeyString = new PublicKey(keypairFromSecretKey.publicKey).toBase58();
+
   return keypairFromSecretKey
 }
 
