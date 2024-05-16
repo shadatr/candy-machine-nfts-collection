@@ -1,10 +1,8 @@
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import {
   addConfigLines,
-  mintFromCandyMachineV2,
   mintV2,
   mplCandyMachine,
-  safeFetchCandyGuard,
   updateCandyGuard,
 } from "@metaplex-foundation/mpl-candy-machine";
 import {
@@ -18,6 +16,7 @@ import {
 import {} from "@metaplex-foundation/mpl-candy-machine";
 import {
   createNft,
+  fetchDigitalAsset,
   fetchMetadata,
   mplTokenMetadata,
   TokenStandard,
@@ -30,13 +29,18 @@ import {
 } from "@metaplex-foundation/mpl-candy-machine";
 import { irysUploader } from "@metaplex-foundation/umi-uploader-irys";
 import fs from "fs";
-import { CANDY_MACHINE_PUBLIC_KEY, COLLECTION_NFT, PRIVATE_KEY } from "./env";
+import {
+  CANDY_MACHINE_PUBLIC_KEY,
+  COLLECTION_MINT,
+  PRIVATE_KEY,
+} from "./env";
 import { setComputeUnitLimit } from "@metaplex-foundation/mpl-toolbox";
 import {
   transactionBuilder,
   generateSigner,
   percentAmount,
 } from "@metaplex-foundation/umi";
+import { fetchDigitalAssetWithTokenByMint } from '@metaplex-foundation/mpl-token-metadata'
 
 const QUICKNODE_RPC =
   "https://still-attentive-mountain.solana-devnet.quiknode.pro/39285c1ec1227a1405f74b521cdc0ba8ade76fdc/";
@@ -216,7 +220,7 @@ const MintNft = async () => {
   const candyMachineAddress = publicKey(CANDY_MACHINE_PUBLIC_KEY);
   const candyMachine = await fetchCandyMachine(umi, candyMachineAddress);
   const nftMint = generateSigner(umi);
-  const metadata = await fetchMetadata(umi, publicKey(COLLECTION_NFT));
+  const metadata = await fetchMetadata(umi, publicKey(COLLECTION_MINT));
 
   await transactionBuilder()
     .add(setComputeUnitLimit(umi, { units: 800_000 }))
@@ -224,7 +228,7 @@ const MintNft = async () => {
       mintV2(umi, {
         candyMachine: candyMachine.publicKey,
         nftMint,
-        collectionMint:publicKey(COLLECTION_NFT),
+        collectionMint: publicKey(COLLECTION_MINT),
         collectionUpdateAuthority: metadata.updateAuthority,
         tokenStandard: candyMachine.tokenStandard,
       })
@@ -235,26 +239,63 @@ const MintNft = async () => {
 // MintNft()
 
 const updateCandyMachineAndGuard = async () => {
+  const thirdPartySigner = generateSigner(umi)
+
   const candyMachineAddress = publicKey(CANDY_MACHINE_PUBLIC_KEY);
   const candyMachine = await fetchCandyMachine(umi, candyMachineAddress);
   const candyGuard = await fetchCandyGuard(umi, candyMachine.mintAuthority);
   const updateCandy = await updateCandyGuard(umi, {
     candyGuard: candyGuard.publicKey,
     guards: {
-      botTax: some({
-        lamports: sol(0.01),
-        lastInstruction: true,
-      }),
-      solPayment: some({
-        lamports: sol(1.5),
-        destination: umi.identity.publicKey,
-      }),
-      startDate: some({ date: dateTime("2024-01-24T15:30:00.000Z") }),
+      guards: {
+        thirdPartySigner: some({ signer: thirdPartySigner.publicKey }),
+        mintLimit: some({ id: 1, limit: 3 }),
+      },
     },
     groups: [],
   }).sendAndConfirm(umi, { send: { skipPreflight: true } });
-  console.log(updateCandy);
-  console.log(candyGuard.guards.startDate);
+  console.log(candyGuard.guards.thirdPartySigner);
+  console.log(thirdPartySigner)
 };
 
-updateCandyMachineAndGuard();
+// updateCandyMachineAndGuard();
+
+const MintFromCandyMachineWithGuards = async () => {
+  const thirdPartySigner = generateSigner(umi)
+
+  const candyMachineAddress = publicKey(CANDY_MACHINE_PUBLIC_KEY);
+  const candyMachine = await fetchCandyMachine(umi, candyMachineAddress);
+  const candyGuard = await fetchCandyGuard(umi, candyMachine.mintAuthority);
+  const updateCandy = await updateCandyGuard(umi, {
+    candyGuard: candyGuard.publicKey,
+    guards: {
+      guards: {
+        thirdPartySigner: some({ signer: thirdPartySigner.publicKey }),
+        mintLimit: some({ id: 1, limit: 3 }),
+      },
+    },
+    groups: [],
+  }).sendAndConfirm(umi, { send: { skipPreflight: true } });
+  console.log(thirdPartySigner)
+    const nftMint = generateSigner(umi);
+  const asset = await fetchDigitalAsset(umi, publicKey(COLLECTION_MINT))
+
+  const mint = await transactionBuilder()
+    .add(setComputeUnitLimit(umi, { units: 800_000 }))
+    .add(
+      mintV2(umi, {
+        candyMachine: publicKey(CANDY_MACHINE_PUBLIC_KEY),
+        nftMint,
+        collectionMint: publicKey(COLLECTION_MINT),
+        collectionUpdateAuthority: asset.metadata.updateAuthority,
+        mintArgs: {
+          thirdPartySigner: some({ signer: thirdPartySigner }),
+          mintLimit: some({ id: 1 }),
+        },
+      })
+    )
+    .sendAndConfirm(umi, { send: { skipPreflight: true } });
+    console.log(base58.encode(Uint8Array.from(mint.signature)))
+    // 2G8K1mCuSA1KzGKt6dAN3aQLxK87afihG1WwwmaAeYEPYE7D4F2vj2nwaJAjoud2CNEeJQXCQY91djQ1Dq4rmhWB
+};
+MintFromCandyMachineWithGuards();
